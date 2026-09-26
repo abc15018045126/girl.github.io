@@ -1,61 +1,70 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>交互式人物画卷</title>
+    <title id="page-title">Interactive Portrait Scroll - Fairy in the Painting</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <!-- Chosen Palette: Warm Neutral with Peach/Rose Accent -->
-    <!-- Application Structure Plan: The SPA is designed as a vertical storytelling scroll. It starts with a holistic, evocative introduction ("画中仙子"), presenting the source text in a beautiful, uninterrupted format to set the mood. It then transitions to an analytical section ("气质解析") with an interactive radar chart, which visually quantifies the abstract qualities from the text, making them tangible and comparable. This fulfills the visualization requirement creatively. The final section ("细节之美") provides a granular exploration, allowing users to interact with specific phrases and descriptions via clickable tabs. This structure guides the user from passive appreciation to active analysis and detailed discovery, creating a richer and more engaging experience than a simple text display. New LLM features are integrated: "Detail Expansion" enhances the "细节之美" section by dynamically generating more poetic text for selected details, and "Poetic Interpretation" adds a creative generative element to the "气质解析" section. -->
-    <!-- Visualization & Content Choices: 1. Source: Full descriptive text -> Goal: Inform/Immerse -> Method: Elegantly typeset text block -> Interaction: None, passive reading -> Justification: Establishes the core subject and tone. 2. Source: Abstract qualities (elegance, gentleness, wisdom) -> Goal: Analyze/Compare -> Method: Chart.js Radar Chart -> Interaction: Hover to see tooltips with scores -> Justification: Translates qualitative descriptions into a quantitative, visually engaging format, fulfilling the chart requirement. 3. Source: Specific descriptive phrases ("waterfall-like hair", "sun-like smile") -> Goal: Explore/Organize -> Method: HTML/Tailwind Tabbed Interface -> Interaction: Click tabs to reveal corresponding text snippets -> Justification: Breaks down the dense description into digestible, user-controlled chunks, promoting focused engagement and exploration. 4. Source: Selected detail text from tabs -> Goal: Enhance/Expand -> Method: LLM-generated text -> Interaction: Button click to trigger generation -> Justification: Adds dynamic, AI-powered creativity to deepen user engagement with specific textual elements. 5. Source: Full original description text -> Goal: Creative Interpretation -> Method: LLM-generated poem/prose -> Interaction: Button click to trigger generation -> Justification: Provides a unique, AI-powered artistic output based on the entire report, offering a "wow" factor. -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --font-serif: 'Playfair Display', 'Noto Serif SC', serif;
+            --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+        }
         body {
-            font-family: 'Noto Serif SC', serif;
+            font-family: var(--font-serif);
             background-color: #FDF8F5;
             color: #5C4B42;
+        }
+        .lang-en {
+            font-family: 'Playfair Display', serif;
+        }
+        .lang-zh {
+            font-family: 'Noto Serif SC', serif;
         }
         .chart-container {
             position: relative;
             width: 100%;
-            max-width: 500px;
+            max-width: 520px;
             margin-left: auto;
             margin-right: auto;
-            height: 300px;
-            max-height: 400px;
+            height: 320px;
+            max-height: 420px;
         }
         @media (min-width: 768px) {
             .chart-container {
                 height: 400px;
             }
         }
+        .tab {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
         .tab.active {
             background-color: #E6A491;
             color: #FFFFFF;
             transform: translateY(-2px);
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            box-shadow: 0 4px 10px -1px rgba(209, 140, 120, 0.35);
         }
         .content-panel {
-            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
         }
         .fade-in {
-            animation: fadeIn 1s ease-in-out forwards;
+            animation: fadeIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(18px); }
             to { opacity: 1; transform: translateY(0); }
         }
         .loading-spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid #D18C78;
+            border: 3px solid rgba(230, 164, 145, 0.2);
+            border-top: 3px solid #D18C78;
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
+            width: 22px;
+            height: 22px;
+            animation: spin 0.8s linear infinite;
             display: inline-block;
             vertical-align: middle;
             margin-right: 8px;
@@ -64,115 +73,260 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.68);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
     </style>
 </head>
-<body class="antialiased">
+<body class="antialiased min-h-screen relative selection:bg-[#E6A491]/30">
 
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
+    <!-- Language Selector Floating Bar -->
+    <nav class="sticky top-0 z-50 w-full backdrop-blur-md bg-[#FDF8F5]/80 border-b border-[#E6A491]/20 py-3 px-4 sm:px-8">
+        <div class="max-w-5xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">🌸</span>
+                <span id="nav-brand" class="font-semibold text-[#D18C78] tracking-wider text-sm sm:text-base">
+                    Portrait Scroll
+                </span>
+            </div>
+            
+            <div class="flex items-center bg-white/90 p-1 rounded-full shadow-sm border border-[#E6A491]/30">
+                <button id="lang-btn-en" onclick="setLanguage('en')" class="px-3.5 py-1 text-xs sm:text-sm font-semibold rounded-full transition-all duration-300 bg-[#E6A491] text-white shadow-sm">
+                    English
+                </button>
+                <button id="lang-btn-zh" onclick="setLanguage('zh')" class="px-3.5 py-1 text-xs sm:text-sm font-semibold rounded-full transition-all duration-300 text-[#5C4B42] hover:text-[#D18C78]">
+                    中文
+                </button>
+            </div>
+        </div>
+    </nav>
 
+    <main class="container max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+
+        <!-- Header / Introduction Section -->
         <header id="home" class="text-center mb-16 md:mb-24 fade-in">
-            <h1 class="text-4xl md:text-5xl font-bold text-[#D18C78] mb-4">画中仙子</h1>
-            <p id="original-description" class="text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
-                她宛如画中仙子，一袭轻柔的丝裙勾勒出曼妙的身姿。瀑布般的乌发倾泻而下，泛着绸缎般的光泽，偶尔有几缕调皮地拂过她光洁的额头。她的脸庞如凝脂般细腻，眉如远黛，眼若秋水，顾盼之间流转着摄人心魄的温柔与灵动。鼻梁挺翘，唇瓣饱满，不施粉黛也自有一种动人心弦的娇艳。
-
-                更引人注目的是她周身散发出的独特气质。她举手投足间都带着一种优雅与从容，仿佛时间在她面前也放慢了脚步。她的笑容如同春日暖阳，能瞬间融化人心，而那双清澈的眼眸中，又蕴藏着智慧与善良的光芒。她不仅仅是外表的美丽，更是一种由内而外散发出的，令人心生敬意的魅力。
-            </p>
+            <span class="inline-block px-3 py-1 mb-4 text-xs font-medium tracking-widest uppercase bg-[#E6A491]/20 text-[#C57C67] rounded-full">
+                <span id="badge-text">Artistic Portrait</span>
+            </span>
+            <h1 id="hero-title" class="text-4xl md:text-5xl lg:text-6xl font-bold text-[#D18C78] mb-6 tracking-tight">
+                Fairy in the Painting
+            </h1>
+            <div id="original-description" class="glass-card p-6 md:p-8 rounded-2xl shadow-sm text-base md:text-lg max-w-3xl mx-auto leading-relaxed text-[#5C4B42] text-left">
+                <!-- Injected via JavaScript based on active language -->
+            </div>
         </header>
 
-        <section id="analysis" class="mb-16 md:mb-24 fade-in" style="animation-delay: 0.3s;">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl md:text-4xl font-bold text-[#D18C78] mb-3">气质解析</h2>
-                <p class="text-md md:text-lg max-w-2xl mx-auto">
-                    这份描述不仅仅在于外表，更在于由内而外散发的气质。下方的雷达图将这些抽象的特质进行了可视化呈现，让我们可以更直观地感知她的人格魅力。将鼠标悬停在图表上可以查看各项特质的“分数”。
+        <!-- Temperament Analysis Section (Radar Chart) -->
+        <section id="analysis" class="mb-16 md:mb-24 fade-in" style="animation-delay: 0.2s;">
+            <div class="text-center mb-10">
+                <h2 id="analysis-title" class="text-3xl md:text-4xl font-bold text-[#D18C78] mb-3">
+                    Temperament Analysis
+                </h2>
+                <p id="analysis-desc" class="text-sm md:text-base max-w-2xl mx-auto text-[#7D6B62]">
+                    This portrait captures far more than physical allure—it explores the inner essence and spirit. The radar chart below visualizes these abstract virtues, allowing you to intuitively appreciate her holistic charm. Hover over data points to inspect individual attribute ratings.
                 </p>
             </div>
-            <div class="chart-container">
-                <canvas id="temperamentChart"></canvas>
+
+            <div class="glass-card p-4 sm:p-6 rounded-2xl shadow-sm">
+                <div class="chart-container">
+                    <canvas id="temperamentChart"></canvas>
+                </div>
             </div>
+
             <div class="text-center mt-8">
-                <button id="generatePoemBtn" class="bg-[#E6A491] hover:bg-[#D18C78] text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105">
-                    ✨ 生成诗意解读 ✨
+                <button id="generatePoemBtn" class="bg-[#E6A491] hover:bg-[#D18C78] text-white font-medium py-3 px-7 rounded-full shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 text-sm md:text-base">
+                    <span id="poem-btn-text">✨ Generate Poetic Interpretation ✨</span>
                 </button>
-                <div id="poemOutput" class="mt-8 p-6 bg-white/70 rounded-xl shadow-md text-left hidden">
-                    <p class="text-lg leading-relaxed text-[#5C4B42]"></p>
+                <div id="poemOutput" class="mt-6 p-6 md:p-8 glass-card rounded-2xl shadow-md text-left hidden border border-[#E6A491]/40">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-xs uppercase tracking-widest text-[#C57C67] font-semibold" id="poem-output-label">Poetic Echo</span>
+                    </div>
+                    <p class="text-base md:text-lg leading-relaxed text-[#5C4B42] whitespace-pre-line"></p>
                     <div id="poemLoading" class="loading-spinner mx-auto mt-4 hidden"></div>
                 </div>
             </div>
         </section>
 
-        <section id="details" class="fade-in" style="animation-delay: 0.6s;">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl md:text-4xl font-bold text-[#D18C78] mb-3">细节之美</h2>
-                 <p class="text-md md:text-lg max-w-2xl mx-auto">
-                    她的美体现在每一个细节中。点击下方的标签，可以聚焦于文本中描绘的特定方面，细细品味文字背后的意境与神韵。
+        <!-- Details of Beauty Section (Tabbed Navigation) -->
+        <section id="details" class="fade-in mb-16" style="animation-delay: 0.4s;">
+            <div class="text-center mb-10">
+                <h2 id="details-title" class="text-3xl md:text-4xl font-bold text-[#D18C78] mb-3">
+                    Details of Beauty
+                </h2>
+                <p id="details-desc" class="text-sm md:text-base max-w-2xl mx-auto text-[#7D6B62]">
+                    Her beauty unfolds in every delicate detail. Select the tabs below to explore specific facets of the portrait and immerse yourself in the poetic nuances of each nuance.
                 </p>
             </div>
 
-            <div class="flex flex-wrap justify-center gap-2 md:gap-4 mb-8">
-                <button class="tab active px-4 py-2 rounded-full bg-white shadow-sm transition-all duration-300" data-target="panel-1" data-text="更引人注目的是她周身散发出的独特气质。她举手投足间都带着一种优雅与从容，仿佛时间在她面前也放慢了脚步...蕴藏着智慧与善良的光芒。她不仅仅是外表的美丽，更是一种由内而外散发出的，令人心生敬意的魅力。">神韵气质</button>
-                <button class="tab px-4 py-2 rounded-full bg-white shadow-sm transition-all duration-300" data-target="panel-2" data-text="眉如远黛，眼若秋水，顾盼之间流转着摄人心魄的温柔与灵动。">眼眸流转</button>
-                <button class="tab px-4 py-2 rounded-full bg-white shadow-sm transition-all duration-300" data-target="panel-3" data-text="瀑布般的乌发倾泻而下，泛着绸缎般的光泽...她的脸庞如凝脂般细腻...鼻梁挺翘，唇瓣饱满，不施粉黛也自有一种动人心弦的娇艳。">容颜发丝</button>
-                <button class="tab px-4 py-2 rounded-full bg-white shadow-sm transition-all duration-300" data-target="panel-4" data-text="她的笑容如同春日暖阳，能瞬间融化人心。">嫣然一笑</button>
+            <!-- Tab Buttons -->
+            <div id="tabs-container" class="flex flex-wrap justify-center gap-2 md:gap-3 mb-8">
+                <!-- Dynamically rendered tabs -->
             </div>
 
-            <div id="tab-content" class="relative max-w-2xl mx-auto bg-white/50 p-8 rounded-xl shadow-lg min-h-[200px]">
-                <div id="panel-1" class="content-panel opacity-100 transform-none">
-                    <h3 class="font-semibold text-xl mb-2 text-[#C57C67]">神韵气质</h3>
-                    <p class="text-lg leading-relaxed text-[#5C4B42]">更引人注目的是她周身散发出的独特气质。她举手投足间都带着一种优雅与从容，仿佛时间在她面前也放慢了脚步...蕴藏着智慧与善良的光芒。她不仅仅是外表的美丽，更是一种由内而外散发出的，令人心生敬意的魅力。</p>
-                    <button class="generate-detail-btn mt-4 bg-[#E6A491] hover:bg-[#D18C78] text-white font-bold py-2 px-4 rounded-full shadow-md transition-all duration-300 transform hover:scale-105">
-                        ✨ 拓展细节 ✨
+            <!-- Tab Panels Content Container -->
+            <div id="tab-content" class="relative max-w-3xl mx-auto glass-card p-6 md:p-8 rounded-2xl shadow-md min-h-[220px]">
+                <div id="active-panel">
+                    <h3 id="panel-title" class="font-semibold text-xl mb-3 text-[#C57C67]"></h3>
+                    <p id="panel-text" class="text-base md:text-lg leading-relaxed text-[#5C4B42]"></p>
+                    
+                    <button id="generateDetailBtn" class="mt-6 bg-[#E6A491] hover:bg-[#D18C78] text-white font-medium py-2 px-5 rounded-full shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 text-sm">
+                        <span id="detail-btn-text">✨ Expand Details ✨</span>
                     </button>
-                    <div class="detail-output mt-4 p-4 bg-white/80 rounded-lg shadow-inner hidden">
-                        <p class="text-base leading-relaxed text-[#5C4B42]"></p>
-                        <div class="detail-loading loading-spinner mx-auto mt-2 hidden"></div>
-                    </div>
-                </div>
-                <div id="panel-2" class="content-panel absolute top-0 left-0 p-8 opacity-0 -translate-y-4 pointer-events-none">
-                     <h3 class="font-semibold text-xl mb-2 text-[#C57C67]">眼眸流转</h3>
-                    <p class="text-lg leading-relaxed text-[#5C4B42]">眉如远黛，眼若秋水，顾盼之间流转着摄人心魄的温柔与灵动。</p>
-                    <button class="generate-detail-btn mt-4 bg-[#E6A491] hover:bg-[#D18C78] text-white font-bold py-2 px-4 rounded-full shadow-md transition-all duration-300 transform hover:scale-105">
-                        ✨ 拓展细节 ✨
-                    </button>
-                    <div class="detail-output mt-4 p-4 bg-white/80 rounded-lg shadow-inner hidden">
-                        <p class="text-base leading-relaxed text-[#5C4B42]"></p>
-                        <div class="detail-loading loading-spinner mx-auto mt-2 hidden"></div>
-                    </div>
-                </div>
-                <div id="panel-3" class="content-panel absolute top-0 left-0 p-8 opacity-0 -translate-y-4 pointer-events-none">
-                     <h3 class="font-semibold text-xl mb-2 text-[#C57C67]">容颜发丝</h3>
-                    <p class="text-lg leading-relaxed text-[#5C4B42]">瀑布般的乌发倾泻而下，泛着绸缎般的光泽...她的脸庞如凝脂般细腻...鼻梁挺翘，唇瓣饱满，不施粉黛也自有一种动人心弦的娇艳。</p>
-                    <button class="generate-detail-btn mt-4 bg-[#E6A491] hover:bg-[#D18C78] text-white font-bold py-2 px-4 rounded-full shadow-md transition-all duration-300 transform hover:scale-105">
-                        ✨ 拓展细节 ✨
-                    </button>
-                    <div class="detail-output mt-4 p-4 bg-white/80 rounded-lg shadow-inner hidden">
-                        <p class="text-base leading-relaxed text-[#5C4B42]"></p>
-                        <div class="detail-loading loading-spinner mx-auto mt-2 hidden"></div>
-                    </div>
-                </div>
-                <div id="panel-4" class="content-panel absolute top-0 left-0 p-8 opacity-0 -translate-y-4 pointer-events-none">
-                     <h3 class="font-semibold text-xl mb-2 text-[#C57C67]">嫣然一笑</h3>
-                    <p class="text-lg leading-relaxed text-[#5C4B42]">她的笑容如同春日暖阳，能瞬间融化人心。</p>
-                    <button class="generate-detail-btn mt-4 bg-[#E6A491] hover:bg-[#D18C78] text-white font-bold py-2 px-4 rounded-full shadow-md transition-all duration-300 transform hover:scale-105">
-                        ✨ 拓展细节 ✨
-                    </button>
-                    <div class="detail-output mt-4 p-4 bg-white/80 rounded-lg shadow-inner hidden">
-                        <p class="text-base leading-relaxed text-[#5C4B42]"></p>
-                        <div class="detail-loading loading-spinner mx-auto mt-2 hidden"></div>
+                    
+                    <div id="detailOutputDiv" class="mt-5 p-5 bg-white/80 rounded-xl shadow-inner border border-[#E6A491]/20 hidden">
+                        <p id="detailOutputText" class="text-sm md:text-base leading-relaxed text-[#5C4B42] whitespace-pre-line"></p>
+                        <div id="detailLoadingSpinner" class="loading-spinner mx-auto mt-3 hidden"></div>
                     </div>
                 </div>
             </div>
         </section>
 
-    </div>
+    </main>
+
+    <footer class="border-t border-[#E6A491]/20 py-8 text-center text-xs sm:text-sm text-[#7D6B62]/80">
+        <p>🌸 Interactive Portrait Scroll · <span id="footer-hosted">Hosted with GitHub Pages</span></p>
+    </footer>
 
     <script>
-        // Function to call Gemini API
-        async function generateText(prompt) {
-            let chatHistory = [];
-            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-            const payload = { contents: chatHistory };
-            const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        // ==========================================
+        // Multilingual Content Dictionary
+        // ==========================================
+        const i18nData = {
+            en: {
+                pageTitle: "Interactive Portrait Scroll - Fairy in the Painting",
+                navBrand: "Portrait Scroll",
+                badgeText: "Artistic Portrait",
+                heroTitle: "Fairy in the Painting",
+                descriptionParagraphs: [
+                    "She is like a fairy stepping out of a painting, draped in a delicate silk gown that traces her graceful silhouette. A cascading waterfall of ebony hair falls down, gleaming with the soft luster of satin, with stray tresses playfully brushing across her smooth forehead. Her porcelain complexion is smooth as jade; her delicate eyebrows resemble distant misty hills, and her clear eyes glisten like autumn lakes, brimming with mesmerizing gentleness and vitality. With an elegant nose and soft, blossoming lips, she carries a natural, breathtaking charm without the need for makeup.",
+                    "Yet what captivates the soul even more is her distinctive aura. Every gesture exudes effortless grace and calm composure, as if time itself slows down in her presence. Her smile is like the radiant warmth of a spring sun, melting hearts in an instant, while her bright gaze radiates wisdom and benevolence. Beyond physical beauty, hers is a noble allure that emanates from within, inspiring profound admiration and respect."
+                ],
+                analysisTitle: "Temperament Analysis",
+                analysisDesc: "This portrait captures far more than physical allure—it explores the inner essence and spirit. The radar chart below visualizes these abstract virtues, allowing you to intuitively appreciate her holistic charm. Hover over data points to inspect individual attribute ratings.",
+                radarLabels: ['Elegance', 'Composure', 'Gentleness', 'Vitality', 'Wisdom', 'Kindness'],
+                radarDatasetLabel: "Virtue Index",
+                poemBtnText: "✨ Generate Poetic Interpretation ✨",
+                poemOutputLabel: "Poetic Echo",
+                detailsTitle: "Details of Beauty",
+                detailsDesc: "Her beauty unfolds in every delicate detail. Select the tabs below to explore specific facets of the portrait and immerse yourself in the poetic nuances of each nuance.",
+                detailBtnText: "✨ Expand Details ✨",
+                footerHosted: "Hosted with GitHub Pages",
+                tabs: [
+                    {
+                        id: "tab-1",
+                        label: "Aura & Demeanor",
+                        title: "Aura & Demeanor",
+                        text: "Yet what captivates the soul even more is her distinctive aura. Every gesture exudes effortless grace and calm composure, as if time itself slows down in her presence... radiating wisdom and benevolence. Beyond physical beauty, hers is an inner allure that inspires profound admiration."
+                    },
+                    {
+                        id: "tab-2",
+                        label: "Gaze & Expression",
+                        title: "Gaze & Expression",
+                        text: "Her delicate eyebrows resemble distant misty hills, and her clear eyes glisten like autumn lakes, brimming with mesmerizing gentleness and vitality."
+                    },
+                    {
+                        id: "tab-3",
+                        label: "Face & Silhouette",
+                        title: "Face & Silhouette",
+                        text: "A cascading waterfall of ebony hair falls down, gleaming with the soft luster of satin... Her porcelain complexion is smooth as jade, with an elegant nose and soft, blossoming lips, carrying a breathtaking charm without makeup."
+                    },
+                    {
+                        id: "tab-4",
+                        label: "Radiant Smile",
+                        title: "Radiant Smile",
+                        text: "Her smile is like the radiant warmth of a spring sun, melting hearts in an instant."
+                    }
+                ],
+                fallbacks: {
+                    poem: "Silk whispers in the autumn breeze,\nA lake of stars beneath her brow.\nTime lingers softly through the trees,\nTo watch the grace that blossoms now.\n\nMore radiant than the morning sun,\nHer wisdom shines, serene and whole—\nA fleeting glance, a heart undone,\nA quiet beauty of the soul.",
+                    details: {
+                        "tab-1": "Her presence carries the serenity of deep valleys and morning mist. Beyond mere charm, every movement speaks of balance and an inner sanctum of stillness that anchors everyone around her.",
+                        "tab-2": "In those autumn-lake eyes, one sees both the quiet depth of twilight skies and the lively spark of starlight. A fleeting gaze carries warmth that remains long after she turns away.",
+                        "tab-3": "Like fine celadon under moonlight, her silhouette possesses a quiet perfection where simplicity reigns supreme over fleeting ornamentation.",
+                        "tab-4": "When she smiles, the winter chill recedes; it is not merely radiant, but comforting, like the gentle dawn breaking after a stormy night."
+                    }
+                }
+            },
+            zh: {
+                pageTitle: "交互式人物画卷 - 画中仙子",
+                navBrand: "画卷集",
+                badgeText: "人物小像",
+                heroTitle: "画中仙子",
+                descriptionParagraphs: [
+                    "她宛如画中仙子，一袭轻柔的丝裙勾勒出曼妙的身姿。瀑布般的乌发倾泻而下，泛着绸缎般的光泽，偶尔有几缕调皮地拂过她光洁的额头。她的脸庞如凝脂般细腻，眉如远黛，眼若秋水，顾盼之间流转着摄人心魄的温柔与灵动。鼻梁挺翘，唇瓣饱满，不施粉黛也自有一种动人心弦的娇艳。",
+                    "更引人注目的是她周身散发出的独特气质。她举手投足间都带着一种优雅与从容，仿佛时间在她面前也放慢了脚步。她的笑容如同春日暖阳，能瞬间融化人心，而那双清澈的眼眸中，又蕴藏着智慧与善良的光芒。她不仅仅是外表的美丽，更是一种由内而外散发出的，令人心生敬意的魅力。"
+                ],
+                analysisTitle: "气质解析",
+                analysisDesc: "这份描述不仅仅在于外表，更在于由内而外散发的气质。下方的雷达图将这些抽象的特质进行了可视化呈现，让我们可以更直观地感知她的人格魅力。将鼠标悬停在图表上可以查看各项特质的“分数”。",
+                radarLabels: ['优雅', '从容', '温柔', '灵动', '智慧', '善良'],
+                radarDatasetLabel: "气质魅力",
+                poemBtnText: "✨ 生成诗意解读 ✨",
+                poemOutputLabel: "诗意回响",
+                detailsTitle: "细节之美",
+                detailsDesc: "她的美体现在每一个细节中。点击下方的标签，可以聚焦于文本中描绘的特定方面，细细品味文字背后的意境与神韵。",
+                detailBtnText: "✨ 拓展细节 ✨",
+                footerHosted: "托管于 GitHub Pages",
+                tabs: [
+                    {
+                        id: "tab-1",
+                        label: "神韵气质",
+                        title: "神韵气质",
+                        text: "更引人注目的是她周身散发出的独特气质。她举手投足间都带着一种优雅与从容，仿佛时间在她面前也放慢了脚步...蕴藏着智慧与善良的光芒。她不仅仅是外表的美丽，更是一种由内而外散发出的，令人心生敬意的魅力。"
+                    },
+                    {
+                        id: "tab-2",
+                        label: "眼眸流转",
+                        title: "眼眸流转",
+                        text: "眉如远黛，眼若秋水，顾盼之间流转着摄人心魄的温柔与灵动。"
+                    },
+                    {
+                        id: "tab-3",
+                        label: "容颜发丝",
+                        title: "容颜发丝",
+                        text: "瀑布般的乌发倾泻而下，泛着绸缎般的光泽...她的脸庞如凝脂般细腻...鼻梁挺翘，唇瓣饱满，不施粉黛也自有一种动人心弦的娇艳。"
+                    },
+                    {
+                        id: "tab-4",
+                        label: "嫣然一笑",
+                        title: "嫣然一笑",
+                        text: "她的笑容如同春日暖阳，能瞬间融化人心。"
+                    }
+                ],
+                fallbacks: {
+                    poem: "轻绡曳雾态轻盈，\n远黛秋波映画屏。\n驻足凭风凝素影，\n含眸蕴智自娉婷。\n\n不借铅华明素魄，\n春阳一笑暖幽冰。\n人间纵有千般锦，\n难及幽兰一脉清。",
+                    details: {
+                        "tab-1": "所谓神韵，在于静水流深。她立于庭院或走过闹市，自有安详静穆的气度，令浮躁者自安，狂狷者自敛，如幽兰自吐芬芳，无声胜有声。",
+                        "tab-2": "那双眸子宛如深秋山峦映入的潭水，清冽而澄澈。流眄之间，既有豆蔻少女的清灵，亦有一泓包容万象的深情。",
+                        "tab-3": "青丝如云，未施钗环却自成锦缎；面色莹润，犹如初雪微凝的羊脂美玉，不饰粉墨，天然去雕饰。",
+                        "tab-4": "那嫣然一笑，并非喧闹的盛放，而是破冰春风，吹开眉梢紧锁的寒霜，带来如逢故知的明朗与妥帖。"
+                    }
+                }
+            }
+        };
+
+        // State Management
+        let currentLang = 'en'; // Default to English
+        let activeTabIndex = 0;
+        let temperamentChart = null;
+
+        // Optional Gemini API Key (keep empty if using fallbacks)
+        const GEMINI_API_KEY = "";
+
+        // API Call with Graceful Fallback
+        async function fetchGeminiOrFallback(prompt, fallbackText) {
+            if (!GEMINI_API_KEY) {
+                // Simulate quick poetic reflection delay for realism
+                await new Promise(resolve => setTimeout(resolve, 600));
+                return fallbackText;
+            }
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }] }]
+            };
 
             try {
                 const response = await fetch(apiUrl, {
@@ -181,57 +335,54 @@
                     body: JSON.stringify(payload)
                 });
                 const result = await response.json();
-                if (result.candidates && result.candidates.length > 0 &&
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0) {
+                if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
                     return result.candidates[0].content.parts[0].text;
-                } else {
-                    console.error('Gemini API response structure unexpected:', result);
-                    return '未能生成内容。';
                 }
-            } catch (error) {
-                console.error('Error calling Gemini API:', error);
-                return '生成内容时发生错误。';
+            } catch (err) {
+                console.warn('Gemini API call failed, falling back to curated preset:', err);
             }
+            return fallbackText;
         }
 
-        document.addEventListener('DOMContentLoaded', function () {
+        // Initialize or Update Radar Chart
+        function initOrUpdateChart(lang) {
+            const data = i18nData[lang];
             const ctx = document.getElementById('temperamentChart').getContext('2d');
-            const temperamentChart = new Chart(ctx, {
+
+            const chartConfig = {
                 type: 'radar',
                 data: {
-                    labels: ['优雅', '从容', '温柔', '灵动', '智慧', '善良'],
+                    labels: data.radarLabels,
                     datasets: [{
-                        label: '气质魅力',
-                        data: [9, 8, 9, 8.5, 9, 9.5],
-                        backgroundColor: 'rgba(230, 164, 145, 0.2)',
-                        borderColor: 'rgba(209, 140, 120, 1)',
+                        label: data.radarDatasetLabel,
+                        data: [9.2, 8.8, 9.4, 8.6, 9.0, 9.6],
+                        backgroundColor: 'rgba(230, 164, 145, 0.28)',
+                        borderColor: 'rgba(209, 140, 120, 0.95)',
                         pointBackgroundColor: 'rgba(209, 140, 120, 1)',
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: 'rgba(209, 140, 120, 1)'
+                        pointBorderColor: '#ffffff',
+                        pointHoverBackgroundColor: '#ffffff',
+                        pointHoverBorderColor: 'rgba(209, 140, 120, 1)',
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
                     }]
                 },
                 options: {
                     maintainAspectRatio: false,
                     scales: {
                         r: {
-                            angleLines: {
-                                color: 'rgba(92, 75, 66, 0.2)'
-                            },
-                            grid: {
-                                color: 'rgba(92, 75, 66, 0.2)'
-                            },
+                            angleLines: { color: 'rgba(92, 75, 66, 0.15)' },
+                            grid: { color: 'rgba(92, 75, 66, 0.12)' },
                             pointLabels: {
                                 font: {
-                                    size: 14,
-                                    family: "'Noto Serif SC', serif"
+                                    size: 13,
+                                    family: lang === 'en' ? "'Playfair Display', serif" : "'Noto Serif SC', serif"
                                 },
                                 color: '#5C4B42'
                             },
                             ticks: {
-                                backdropColor: '#FDF8F5',
-                                color: 'rgba(92, 75, 66, 0.6)',
+                                backdropColor: 'transparent',
+                                color: 'rgba(92, 75, 66, 0.5)',
                                 stepSize: 2,
                                 beginAtZero: true,
                                 max: 10
@@ -239,92 +390,158 @@
                         }
                     },
                     plugins: {
-                        legend: {
-                            display: false
-                        },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    if (context.parsed.r !== null) {
-                                        label += context.parsed.r;
-                                    }
-                                    return label;
+                                    return ` ${context.dataset.label}: ${context.parsed.r}/10`;
                                 }
                             }
                         }
                     }
                 }
+            };
+
+            if (temperamentChart) {
+                temperamentChart.destroy();
+            }
+            temperamentChart = new Chart(ctx, chartConfig);
+        }
+
+        // Render Tabs and Active Panel
+        function renderTabs() {
+            const data = i18nData[currentLang];
+            const container = document.getElementById('tabs-container');
+            container.innerHTML = '';
+
+            data.tabs.forEach((tab, index) => {
+                const btn = document.createElement('button');
+                btn.className = `tab px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-medium border border-[#E6A491]/30 transition-all duration-300 ${
+                    index === activeTabIndex ? 'active' : 'bg-white/80 text-[#5C4B42] hover:bg-white'
+                }`;
+                btn.innerText = tab.label;
+                btn.onclick = () => selectTab(index);
+                container.appendChild(btn);
             });
 
-            const tabs = document.querySelectorAll('.tab');
-            const panels = document.querySelectorAll('.content-panel');
-            const generateDetailBtns = document.querySelectorAll('.generate-detail-btn');
-            const generatePoemBtn = document.getElementById('generatePoemBtn');
+            // Update Panel content
+            const activeTab = data.tabs[activeTabIndex];
+            document.getElementById('panel-title').innerText = activeTab.title;
+            document.getElementById('panel-text').innerText = activeTab.text;
+
+            // Hide previous detail output when changing tabs
+            document.getElementById('detailOutputDiv').classList.add('hidden');
+            document.getElementById('detailOutputText').innerText = '';
+        }
+
+        function selectTab(index) {
+            activeTabIndex = index;
+            renderTabs();
+        }
+
+        // Set Language Function
+        function setLanguage(lang) {
+            currentLang = lang;
+            const data = i18nData[lang];
+
+            // Update HTML tag lang
+            document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+            document.body.className = `antialiased min-h-screen relative selection:bg-[#E6A491]/30 ${lang === 'en' ? 'lang-en' : 'lang-zh'}`;
+
+            // Update Text Elements
+            document.getElementById('page-title').innerText = data.pageTitle;
+            document.getElementById('nav-brand').innerText = data.navBrand;
+            document.getElementById('badge-text').innerText = data.badgeText;
+            document.getElementById('hero-title').innerText = data.heroTitle;
+            
+            // Description paragraphs
+            const descContainer = document.getElementById('original-description');
+            descContainer.innerHTML = data.descriptionParagraphs.map(p => `<p class="mb-4 last:mb-0">${p}</p>`).join('');
+
+            document.getElementById('analysis-title').innerText = data.analysisTitle;
+            document.getElementById('analysis-desc').innerText = data.analysisDesc;
+            document.getElementById('poem-btn-text').innerText = data.poemBtnText;
+            document.getElementById('poem-output-label').innerText = data.poemOutputLabel;
+
+            document.getElementById('details-title').innerText = data.detailsTitle;
+            document.getElementById('details-desc').innerText = data.detailsDesc;
+            document.getElementById('detail-btn-text').innerText = data.detailBtnText;
+            document.getElementById('footer-hosted').innerText = data.footerHosted;
+
+            // Reset dynamic output containers
+            document.getElementById('poemOutput').classList.add('hidden');
+
+            // Update Language Switcher Button Styles
+            const btnEn = document.getElementById('lang-btn-en');
+            const btnZh = document.getElementById('lang-btn-zh');
+            if (lang === 'en') {
+                btnEn.className = "px-3.5 py-1 text-xs sm:text-sm font-semibold rounded-full transition-all duration-300 bg-[#E6A491] text-white shadow-sm";
+                btnZh.className = "px-3.5 py-1 text-xs sm:text-sm font-semibold rounded-full transition-all duration-300 text-[#5C4B42] hover:text-[#D18C78]";
+            } else {
+                btnZh.className = "px-3.5 py-1 text-xs sm:text-sm font-semibold rounded-full transition-all duration-300 bg-[#E6A491] text-white shadow-sm";
+                btnEn.className = "px-3.5 py-1 text-xs sm:text-sm font-semibold rounded-full transition-all duration-300 text-[#5C4B42] hover:text-[#D18C78]";
+            }
+
+            // Re-render chart and tabs
+            initOrUpdateChart(lang);
+            renderTabs();
+        }
+
+        // Setup Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize default language (English)
+            setLanguage('en');
+
+            // Generate Poetic Interpretation Button
+            const poemBtn = document.getElementById('generatePoemBtn');
             const poemOutput = document.getElementById('poemOutput');
-            const poemLoading = document.getElementById('poemLoading');
-            const originalDescription = document.getElementById('original-description').innerText;
+            const poemParagraph = poemOutput.querySelector('p');
+            const poemSpinner = document.getElementById('poemLoading');
 
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    tabs.forEach(item => item.classList.remove('active'));
-                    tab.classList.add('active');
-
-                    const targetPanelId = tab.getAttribute('data-target');
-                    
-                    panels.forEach(panel => {
-                        if (panel.id === targetPanelId) {
-                            panel.classList.remove('opacity-0', '-translate-y-4', 'pointer-events-none');
-                            panel.classList.add('opacity-100', 'transform-none');
-                        } else {
-                            panel.classList.add('opacity-0', '-translate-y-4', 'pointer-events-none');
-                            panel.classList.remove('opacity-100', 'transform-none');
-                        }
-                    });
-                });
-            });
-
-            generateDetailBtns.forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    const parentPanel = btn.closest('.content-panel');
-                    const originalTextElement = parentPanel.querySelector('p');
-                    const detailOutputDiv = parentPanel.querySelector('.detail-output');
-                    const detailOutputP = detailOutputDiv.querySelector('p');
-                    const detailLoadingSpinner = detailOutputDiv.querySelector('.detail-loading');
-
-                    const textToExpand = originalTextElement.innerText;
-                    const prompt = `请根据以下描述，对 "${textToExpand}" 进行更详细、更富有诗意的拓展描述，字数控制在150字以内。`;
-
-                    detailOutputDiv.classList.remove('hidden');
-                    detailOutputP.innerText = '';
-                    detailLoadingSpinner.classList.remove('hidden');
-                    btn.disabled = true; // Disable button during generation
-
-                    const generatedContent = await generateText(prompt);
-                    detailOutputP.innerText = generatedContent;
-                    detailLoadingSpinner.classList.add('hidden');
-                    btn.disabled = false; // Re-enable button
-                });
-            });
-
-            generatePoemBtn.addEventListener('click', async () => {
-                const prompt = `请根据以下对一位美丽女性的描述，创作一首简短的现代诗歌或一段富有画面感的散文，字数控制在200字以内，突出其内在与外在的和谐之美：\n\n"${originalDescription}"`;
-
+            poemBtn.addEventListener('click', async () => {
                 poemOutput.classList.remove('hidden');
-                poemOutput.querySelector('p').innerText = '';
-                poemLoading.classList.remove('hidden');
-                generatePoemBtn.disabled = true; // Disable button during generation
+                poemParagraph.innerText = '';
+                poemSpinner.classList.remove('hidden');
+                poemBtn.disabled = true;
 
-                const generatedPoem = await generateText(prompt);
-                poemOutput.querySelector('p').innerText = generatedPoem;
-                poemLoading.classList.add('hidden');
-                generatePoemBtn.disabled = false; // Re-enable button
+                const fullText = i18nData[currentLang].descriptionParagraphs.join('\n\n');
+                const prompt = currentLang === 'en'
+                    ? `Create an evocative, short poem or poetic prose vignette (within 150 words) celebrating the harmony of inner and outer beauty based on this description:\n\n"${fullText}"`
+                    : `请根据以下对一位美丽女性的描述，创作一首简短优美的现代诗歌或一段富有画面感的散文，字数在150字以内，突出其内在神韵与外在的和谐之美：\n\n"${fullText}"`;
+
+                const fallback = i18nData[currentLang].fallbacks.poem;
+                const result = await fetchGeminiOrFallback(prompt, fallback);
+
+                poemSpinner.classList.add('hidden');
+                poemParagraph.innerText = result;
+                poemBtn.disabled = false;
+            });
+
+            // Expand Detail Button
+            const detailBtn = document.getElementById('generateDetailBtn');
+            const detailOutputDiv = document.getElementById('detailOutputDiv');
+            const detailOutputText = document.getElementById('detailOutputText');
+            const detailSpinner = document.getElementById('detailLoadingSpinner');
+
+            detailBtn.addEventListener('click', async () => {
+                detailOutputDiv.classList.remove('hidden');
+                detailOutputText.innerText = '';
+                detailSpinner.classList.remove('hidden');
+                detailBtn.disabled = true;
+
+                const activeTab = i18nData[currentLang].tabs[activeTabIndex];
+                const prompt = currentLang === 'en'
+                    ? `Please expand upon the following descriptive nuance with deeply poetic, literary sensory details (within 120 words):\n\n"${activeTab.text}"`
+                    : `请根据以下描述，对“${activeTab.text}”进行更深层次、更富有诗意与画面感的细节拓展，字数在120字以内。`;
+
+                const fallback = i18nData[currentLang].fallbacks.details[activeTab.id] || activeTab.text;
+                const result = await fetchGeminiOrFallback(prompt, fallback);
+
+                detailSpinner.classList.add('hidden');
+                detailOutputText.innerText = result;
+                detailBtn.disabled = false;
             });
         });
     </script>
-
 </body>
 </html>
